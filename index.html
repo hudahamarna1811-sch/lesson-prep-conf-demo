@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>برنامج تحضير الدروس بالذكاء الاصطناعي | نسخة تجريبية</title>
+<style>
+  :root{
+    --navy:#173b68; --blue:#24578b; --gold:#d7ad55; --ink:#203047;
+    --muted:#65758b; --paper:#f4f7fb; --line:#e1e8f0; --danger:#b3261e; --ok:#1e7a3b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:Tahoma,Arial,sans-serif; color:var(--ink);
+    background:linear-gradient(135deg,#edf3fa,#fff 55%,#f8f3e8); min-height:100vh;
+  }
+  .wrap{width:min(960px,94%); margin:34px auto 60px;}
+  header{
+    background:linear-gradient(120deg,var(--navy),var(--blue)); color:#fff;
+    padding:30px 26px; border-radius:20px; text-align:center; box-shadow:0 12px 32px #173b6825;
+  }
+  .eyebrow{color:#f2d99e; font-size:13px; letter-spacing:.3px;}
+  h1{margin:10px 0 6px; font-size:clamp(22px,4.2vw,32px);}
+  header p{margin:0; color:#e7eef8; line-height:1.8; font-size:14px;}
+
+  .panel{
+    background:#fff; border:1px solid var(--line); border-radius:18px;
+    padding:24px; margin-top:22px; box-shadow:0 7px 22px #1d3c6010;
+  }
+  .panel h2{margin:0 0 16px; color:var(--navy); font-size:18px; display:flex; align-items:center; gap:8px;}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media(max-width:620px){ .grid{grid-template-columns:1fr;} }
+  label{display:block; font-size:13px; color:var(--muted); margin-bottom:5px; font-weight:bold;}
+  input,textarea,select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+    font-family:inherit; font-size:14px; background:#fbfcfe; color:var(--ink);
+  }
+  textarea{resize:vertical; min-height:70px;}
+  .field{margin-bottom:14px;}
+
+  .btn{
+    border:none; border-radius:12px; padding:13px 22px; font-weight:bold; font-size:15px;
+    cursor:pointer; color:#fff; background:var(--navy); transition:.15s background;
+  }
+  .btn:hover{background:var(--blue);}
+  .btn:disabled{background:#9fb0c4; cursor:not-allowed;}
+  .btn-outline{
+    background:#fff; color:var(--navy); border:1.5px solid var(--navy);
+  }
+  .btn-outline:hover{background:#eef3fa;}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+
+  .status{
+    margin-top:14px; padding:12px 14px; border-radius:10px; font-size:14px; line-height:1.8; display:none;
+  }
+  .status.show{display:block;}
+  .status.loading{background:#eef3fa; color:var(--navy);}
+  .status.error{background:#fdeceb; color:var(--danger);}
+  .status.ok{background:#eaf7ee; color:var(--ok);}
+
+  .result{display:none;}
+  .result.show{display:block;}
+  .result-head{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px;
+    padding:18px; margin-bottom:16px;
+  }
+  .result-head .rtitle{font-size:19px; font-weight:bold; color:var(--navy); margin-bottom:6px;}
+  .meta-row{display:flex; gap:18px; flex-wrap:wrap; font-size:13px; color:var(--muted);}
+  .meta-row b{color:var(--ink);}
+
+  .block{margin-bottom:16px;}
+  .block h3{
+    font-size:15px; color:var(--navy); margin:0 0 8px; padding-bottom:6px;
+    border-bottom:2px solid var(--gold);
+  }
+  .block textarea, .block input{background:#fff;}
+  ul.objectives{margin:0; padding-inline-start:20px; line-height:2;}
+  ul.objectives li{font-size:14px;}
+  .obj-row{display:flex; gap:8px; align-items:center; margin-bottom:6px;}
+  .obj-row input{flex:1;}
+  .small-x{
+    background:#fdeceb; color:var(--danger); border:none; border-radius:8px;
+    width:30px; height:30px; cursor:pointer; font-weight:bold; flex:none;
+  }
+  .add-row{font-size:13px; color:var(--navy); cursor:pointer; background:none; border:1px dashed var(--navy); border-radius:8px; padding:6px 10px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{border:1px solid var(--line); padding:8px; text-align:right; vertical-align:top;}
+  th{background:var(--paper); color:var(--navy);}
+  td textarea{border:none; background:transparent; min-height:50px; padding:4px;}
+  td[data-col="time"] textarea{min-height:30px;}
+
+  .proc-del{color:var(--danger); font-size:12px; cursor:pointer; background:none; border:none; text-decoration:underline;}
+
+  footer{text-align:center; color:var(--muted); font-size:12px; padding:20px 10px 0;}
+
+  @media print{
+    body{background:#fff;}
+    header, .panel.input-panel, .actions, .status, footer{display:none !important;}
+    .result{display:block !important;}
+    .panel.result-panel{box-shadow:none; border:none; padding:0;}
+    textarea, input{border:none !important; background:transparent !important;}
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header>
+    <div class="eyebrow">المؤتمر التعليمي · نسخة تجريبية للعرض</div>
+    <h1>برنامج تحضير الدروس بالذكاء الاصطناعي</h1>
+    <p>عبّئ بيانات الدرس بسرعة، واحصل على تحضير كامل قابل للتعديل والطباعة خلال ثوانٍ</p>
+  </header>
+
+  <section class="panel input-panel">
+    <h2>📝 بيانات الدرس</h2>
+    <div class="grid">
+      <div class="field">
+        <label>المادة *</label>
+        <input id="subject" placeholder="مثال: التربية الإسلامية">
+      </div>
+      <div class="field">
+        <label>الصف / المرحلة *</label>
+        <input id="grade" placeholder="مثال: الصف الخامس الأساسي">
+      </div>
+      <div class="field">
+        <label>عنوان الدرس *</label>
+        <input id="title" placeholder="مثال: آداب الحوار">
+      </div>
+      <div class="field">
+        <label>مدة الحصة</label>
+        <input id="duration" placeholder="مثال: 45 دقيقة" value="45 دقيقة">
+      </div>
+    </div>
+    <div class="field">
+      <label>ملاحظات إضافية (اختياري)</label>
+      <textarea id="notesInput" placeholder="أي تفاصيل تريد مراعاتها: نشاط معيّن، وسيلة متوفرة، مستوى الطلبة..."></textarea>
+    </div>
+    <div class="field">
+      <label>رمز الدخول (إن طُلب منك أثناء العرض)</label>
+      <input id="demoCode" placeholder="اتركه فارغًا إذا لم يُطلب منك رمز">
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="genBtn" onclick="generatePrep()">✨ توليد التحضير بالذكاء الاصطناعي</button>
+    </div>
+    <div class="status" id="statusBox"></div>
+  </section>
+
+  <section class="panel result-panel result" id="resultBox">
+    <h2>📄 تحضير الدرس (قابل للتعديل)</h2>
+
+    <div class="result-head">
+      <div class="rtitle" id="rTitleView">—</div>
+      <div class="meta-row">
+        <span><b>المادة:</b> <span id="rSubjectView">—</span></span>
+        <span><b>الصف:</b> <span id="rGradeView">—</span></span>
+        <span><b>المدة:</b> <span id="rDurationView">—</span></span>
+      </div>
+    </div>
+
+    <div class="block">
+      <h3>الهدف العام</h3>
+      <textarea id="generalObjective" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>الأهداف الخاصة (السلوكية)</h3>
+      <div id="objectivesList"></div>
+      <button class="add-row" onclick="addObjective()">+ إضافة هدف</button>
+    </div>
+
+    <div class="block">
+      <h3>التهيئة / التمهيد</h3>
+      <textarea id="warmup" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>الخبرات السابقة</h3>
+      <textarea id="priorKnowledge" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>الوسائل والأدوات</h3>
+      <textarea id="materials" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>إجراءات الدرس</h3>
+      <table id="procTable">
+        <thead>
+          <tr><th style="width:90px">الوقت</th><th>النشاط / الإجراء</th><th style="width:140px">طريقة التدريس</th><th style="width:40px"></th></tr>
+        </thead>
+        <tbody id="procBody"></tbody>
+      </table>
+      <button class="add-row" style="margin-top:8px" onclick="addProcedure()">+ إضافة خطوة</button>
+    </div>
+
+    <div class="block">
+      <h3>التقويم</h3>
+      <textarea id="evaluation" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>الواجب المنزلي</h3>
+      <textarea id="homework" rows="2"></textarea>
+    </div>
+
+    <div class="block">
+      <h3>ملاحظات</h3>
+      <textarea id="notesOut" rows="2"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+      <button class="btn btn-outline" onclick="generatePrep()">↻ توليد نسخة جديدة</button>
+    </div>
+  </section>
+
+  <footer>نسخة تجريبية للعرض في المؤتمر — لا تُدخل بيانات طلبة أو معلمين حقيقية</footer>
+</main>
+
+<script>
+function setStatus(msg, kind){
+  const box = document.getElementById('statusBox');
+  box.textContent = msg;
+  box.className = 'status show ' + (kind||'');
+}
+function clearStatus(){
+  const box = document.getElementById('statusBox');
+  box.className = 'status';
+  box.textContent = '';
+}
+
+function buildSystemPrompt(){
+  return `أنت مساعد تربوي محترف متخصص في إعداد تحضير الدروس وفق المعايير التربوية الحديثة.
+مهمتك: توليد تحضير درس كامل ومنظم، والرد بكائن JSON واحد فقط دون أي نص أو شرح خارج الكائن، وفق هذا المخطط بالضبط:
+
+{
+  "title": "string - عنوان الدرس",
+  "subject": "string",
+  "grade": "string",
+  "duration": "string",
+  "generalObjective": "string - جملة واحدة واضحة",
+  "specificObjectives": ["string", "string", "..."],
+  "priorKnowledge": "string",
+  "materials": "string - قائمة مفصولة بفواصل",
+  "warmup": "string - فقرة قصيرة لنشاط تمهيدي",
+  "procedures": [
+    {"time": "string مثل 5 دقائق", "activity": "string وصف الإجراء", "method": "string طريقة التدريس مثل حوار ومناقشة"}
+  ],
+  "evaluation": "string",
+  "homework": "string",
+  "notes": "string"
+}
+
+اكتب المحتوى باللغة العربية الفصحى، بأسلوب عملي مناسب لمعلم داخل الصف، ومناسب تمامًا للمادة والصف المحددين.
+اجعل عدد خطوات "procedures" بين 3 و5 خطوات تغطي كامل زمن الحصة بشكل منطقي.
+اجعل عدد "specificObjectives" بين 3 و5 أهداف سلوكية قابلة للقياس.
+لا تكتب أي نص قبل أو بعد كائن الـ JSON، ولا تستخدم markdown.`;
+}
+
+function buildUserPrompt(){
+  const subject = document.getElementById('subject').value.trim();
+  const grade = document.getElementById('grade').value.trim();
+  const title = document.getElementById('title').value.trim();
+  const duration = document.getElementById('duration').value.trim() || '45 دقيقة';
+  const notes = document.getElementById('notesInput').value.trim();
+
+  let p = `المادة: ${subject}\nالصف: ${grade}\nعنوان الدرس: ${title}\nمدة الحصة: ${duration}`;
+  if(notes) p += `\nملاحظات إضافية من المعلم: ${notes}`;
+  return p;
+}
+
+function extractJson(text){
+  try { return JSON.parse(text); } catch(e){}
+  const match = text.match(/\{[\s\S]*\}/);
+  if(match){
+    try { return JSON.parse(match[0]); } catch(e){}
+  }
+  return null;
+}
+
+async function generatePrep(){
+  const subject = document.getElementById('subject').value.trim();
+  const grade = document.getElementById('grade').value.trim();
+  const title = document.getElementById('title').value.trim();
+
+  if(!subject || !grade || !title){
+    setStatus('من فضلك عبّئي المادة والصف وعنوان الدرس (الحقول المطلوبة).', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  setStatus('جاري توليد التحضير بالذكاء الاصطناعي... قد يستغرق بضع ثوانٍ', 'loading');
+  document.getElementById('resultBox').classList.remove('show');
+
+  const demoCode = document.getElementById('demoCode').value.trim();
+  const headers = {'Content-Type':'application/json'};
+  if(demoCode) headers['x-demo-code'] = demoCode;
+
+  try{
+    const res = await fetch('/api/generate-prep', {
+      method:'POST',
+      headers,
+      body: JSON.stringify({
+        systemPrompt: buildSystemPrompt(),
+        userPrompt: buildUserPrompt()
+      })
+    });
+
+    if(!res.ok){
+      let msg = 'تعذّر إتمام الطلب. حاول مرة أخرى.';
+      try{ const j = await res.json(); if(j && j.message) msg = j.message; }catch(e){}
+      setStatus(msg, 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parsed = extractJson(rawText);
+
+    if(!parsed){
+      setStatus('تم الاتصال بالخدمة لكن تعذّر فهم الرد. حاول مرة أخرى.', 'error');
+      btn.disabled = false;
+      return;
+    }
+
+    fillResult(parsed, {subject, grade, title});
+    clearStatus();
+    document.getElementById('resultBox').classList.add('show');
+    document.getElementById('resultBox').scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    console.error(err);
+    setStatus('حدث خطأ في الاتصال بالخادم. تأكد من اتصال الإنترنت وحاول مجددًا.', 'error');
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function fillResult(p, formVals){
+  document.getElementById('rTitleView').textContent = p.title || formVals.title;
+  document.getElementById('rSubjectView').textContent = p.subject || formVals.subject;
+  document.getElementById('rGradeView').textContent = p.grade || formVals.grade;
+  document.getElementById('rDurationView').textContent = document.getElementById('duration').value.trim() || '—';
+
+  document.getElementById('generalObjective').value = p.generalObjective || '';
+  document.getElementById('warmup').value = p.warmup || '';
+  document.getElementById('priorKnowledge').value = p.priorKnowledge || '';
+  document.getElementById('materials').value = Array.isArray(p.materials) ? p.materials.join('، ') : (p.materials || '');
+  document.getElementById('evaluation').value = p.evaluation || '';
+  document.getElementById('homework').value = p.homework || '';
+  document.getElementById('notesOut').value = p.notes || '';
+
+  const objList = document.getElementById('objectivesList');
+  objList.innerHTML = '';
+  (p.specificObjectives && p.specificObjectives.length ? p.specificObjectives : ['']).forEach(o => addObjective(o));
+
+  const procBody = document.getElementById('procBody');
+  procBody.innerHTML = '';
+  (p.procedures && p.procedures.length ? p.procedures : [{time:'',activity:'',method:''}]).forEach(step => addProcedure(step));
+}
+
+function addObjective(value){
+  const objList = document.getElementById('objectivesList');
+  const row = document.createElement('div');
+  row.className = 'obj-row';
+  row.innerHTML = `<input type="text" value="${(value||'').replace(/"/g,'&quot;')}" placeholder="هدف سلوكي...">
+    <button class="small-x" onclick="this.parentElement.remove()">×</button>`;
+  objList.appendChild(row);
+}
+
+function addProcedure(step){
+  step = step || {time:'',activity:'',method:''};
+  const body = document.getElementById('procBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td data-col="time"><textarea rows="2">${step.time||''}</textarea></td>
+    <td><textarea rows="2">${step.activity||''}</textarea></td>
+    <td><textarea rows="2">${step.method||''}</textarea></td>
+    <td><button class="proc-del" onclick="this.closest('tr').remove()">حذف</button></td>
+  `;
+  body.appendChild(tr);
+}
+</script>
+</body>
+</html>
