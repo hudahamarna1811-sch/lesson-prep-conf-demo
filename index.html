@@ -18,12 +18,72 @@
 </style>
 </head>
 <body>
-<div id="root">
+<script>
+(function(){
+  // ردع بسيط ضد النسخ العرضي أثناء العرض التجريبي - ليس حماية مطلقة
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    if (e.key === 'F12') { e.preventDefault(); return; }
+    if (e.ctrlKey && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) { e.preventDefault(); return; }
+    if (e.ctrlKey && k === 'u') { e.preventDefault(); return; }
+  });
+  console.log('%c⛔ تنبيه', 'color:#dc2626; font-size:28px; font-weight:bold;');
+  console.log('%cهذا المحتوى والبرمجة ملك لمدرسة السلف الصالح الخاصة — نسخة عرض تجريبي للمؤتمر فقط. يُمنع نسخ أو إعادة استخدام هذا الكود دون إذن.', 'color:#334155; font-size:13px;');
+})();
+</script>
+<div id="root" style="display:none;">
   <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#94a3b8;font-size:14px;">
     جاري تحميل التطبيق...
   </div>
 </div>
-<pre id="boot-error"></pre>
+<pre id="boot-error" style="display:none;"></pre>
+
+<div id="demo-gate" style="position:fixed;inset:0;z-index:99999;background:#020617;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;">
+  <div style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:32px;max-width:340px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="font-size:34px;margin-bottom:10px;">🔒</div>
+    <div style="color:#e2e8f0;font-size:16px;font-weight:bold;margin-bottom:6px;">نسخة عرض تجريبي</div>
+    <div style="color:#94a3b8;font-size:12px;margin-bottom:18px;line-height:1.8;">أدخلي رمز الدخول للمتابعة</div>
+    <input id="demo-gate-input" type="password" placeholder="رمز الدخول" dir="ltr" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#020617;color:#fff;text-align:center;font-size:14px;margin-bottom:10px;" />
+    <div id="demo-gate-error" style="color:#fca5a5;font-size:12px;min-height:16px;margin-bottom:10px;"></div>
+    <button id="demo-gate-btn" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f59e0b;color:#0f172a;font-weight:bold;cursor:pointer;font-size:14px;">دخول</button>
+  </div>
+</div>
+<script>
+(function(){
+  // ====================================================================
+  // 🔑 رمز الدخول لنسخة العرض التجريبي
+  // بعد ما تخلصي من استخدام البرنامج بالمؤتمر، غيّري القيمة التالية
+  // لأي نص عشوائي آخر (مثلاً "DONE-2026-XYZ") وادفعي (commit) التعديل
+  // على GitHub - هيك حتى لو ضل الرابط موجود، محد يقدر يدخل بعدها.
+  // ====================================================================
+  var DEMO_ACCESS_CODE = "conf2026";
+
+  var gate = document.getElementById('demo-gate');
+  var input = document.getElementById('demo-gate-input');
+  var btn = document.getElementById('demo-gate-btn');
+  var err = document.getElementById('demo-gate-error');
+  var rootEl = document.getElementById('root');
+  var errEl = document.getElementById('boot-error');
+
+  function unlock(){
+    try{ sessionStorage.setItem('demoGateUnlocked', '1'); }catch(e){}
+    gate.style.display = 'none';
+    rootEl.style.display = '';
+    errEl.style.display = '';
+  }
+  function tryUnlock(){
+    if(input.value === DEMO_ACCESS_CODE){ unlock(); }
+    else { err.textContent = 'رمز غير صحيح، حاول مرة أخرى.'; input.value=''; input.focus(); }
+  }
+  btn.addEventListener('click', tryUnlock);
+  input.addEventListener('keydown', function(e){ if(e.key === 'Enter') tryUnlock(); });
+  input.focus();
+  try{
+    if(sessionStorage.getItem('demoGateUnlocked') === '1'){ unlock(); }
+  }catch(e){}
+})();
+</script>
 
 <!-- كود التطبيق موضوع هنا كنص عادي (وليس كسكربت) حتى نتحكم بعملية تحويله بأنفسنا
      بدلاً من الاعتماد على التحويل التلقائي الذي قد يستخدم إعدادات JSX غير متوافقة مع بيئة المتصفح المباشرة -->
