@@ -1,3 +1,5 @@
+import { isAuthed } from './_auth.js';
+
 // دالة خادم (Vercel Serverless Function) — تستدعي Gemini API من جهة الخادم
 // بحيث لا يظهر مفتاح API أبداً في متصفح المستخدم.
 // يجب ضبط متغيّر البيئة GEMINI_API_KEY في إعدادات مشروع Vercel (وليس هنا في الكود).
@@ -13,12 +15,18 @@ export const config = {
   }
 };
 
-const MODEL_CANDIDATES = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];
+// يمكن تغيير النماذج من متغير البيئة GEMINI_MODELS (مفصولة بفواصل) بدون تعديل الكود
+const MODEL_CANDIDATES = (process.env.GEMINI_MODELS || 'gemini-3.6-flash,gemini-3.5-flash-lite,gemini-2.5-flash')
+  .split(',').map((m) => m.trim()).filter(Boolean);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ message: 'Method not allowed' });
+  }
+  // لا توليد إلا لمن أدخل رمز الدخول (يحمي حصة المفتاح من الاستدعاء المباشر)
+  if (!isAuthed(req)) {
+    return res.status(401).json({ message: 'انتهت الجلسة. أعيدي تحميل الصفحة وأدخلي رمز الدخول.' });
   }
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -59,18 +67,21 @@ export default async function handler(req, res) {
 
   let lastErrorBody = { message: 'تعذّر الوصول لأي نموذج من نماذج Gemini' };
   let lastStatus = 502;
+  const tried = [];
   for (const modelName of MODEL_CANDIDATES) {
     try {
       const r = await callGemini(modelName);
       if (r.status === 404) {
         lastStatus = 404;
-        lastErrorBody = { message: `النموذج ${modelName} غير متاح حالياً` };
+        tried.push(`${modelName}: غير متاح (404)`);
+        lastErrorBody = { message: `النموذج غير متاح — ${tried.join(' | ')}` };
         continue; // جرّب النموذج التالي
       }
       const data = await r.json();
       if (!r.ok) {
         lastStatus = r.status;
         lastErrorBody = { message: data?.error?.message || `فشل الاتصال بـ Gemini (رمز الحالة ${r.status})` };
+        tried.push(`${modelName}: ${r.status} ${String(lastErrorBody.message).slice(0, 120)}`);
         if (r.status === 429) {
           return res.status(429).json({ message: 'تم بلوغ الحد الأقصى المؤقت لطلبات Gemini في الدقيقة الحالية.' });
         }
